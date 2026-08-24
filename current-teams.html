@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="https://playdurham.com/wp-content/uploads/2024/04/2024-Wiffle-Ball-Logo.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/site.css?v=w601430">
+<title>Current Teams | Durham Wiffle Ball</title>
+<meta name="description" content="The 20 teams playing in the 2026 Season of Durham Wiffle Ball, by league.">
+</head>
+<body>
+<div data-header="current-teams.html"></div>
+<div class="page-head">
+  <img class="page-head-bg" src="https://playdurham.com/wp-content/uploads/2024/04/Promo_03-1024x487.jpg" alt="">
+  <div class="wrap">
+    <div class="crumb">2026 Season</div>
+    <h1 class="h-lg">Teams</h1>
+    <p>The active teams for this season. Scheduling and attendance managed here.</p>
+  </div>
+</div>
+<main class="section">
+  <div class="wrap">
+    <div class="toolbar">
+      <span class="spacer"></span>
+      <input class="field" type="search" placeholder="Search teams…" data-search>
+    </div>
+    <p class="muted" id="team-count" style="margin:-10px 0 18px;font-size:.9rem"></p>
+    <div class="grid grid-4" id="ct-out"></div>
+  </div>
+</main>
+<div data-footer></div>
+<script src="assets/js/config.js?v=w601430"></script>
+<script src="assets/js/data.js?v=w601430"></script>
+<script src="assets/js/api.js?v=w601430"></script>
+<script src="assets/js/site.js?v=w601430"></script>
+<script>
+(function(){
+  var state={q:''};
+  function render(){
+    var list=DS.activeTeams().slice().sort(function(a,b){return a.name.localeCompare(b.name);}).filter(function(t){
+      if(state.q&&(t.name+' '+t.cause).toLowerCase().indexOf(state.q)===-1) return false;
+      return true;
+    });
+    document.getElementById('ct-out').innerHTML = list.length ? list.map(function(t){
+      return '<a class="team-tile" href="team.html?id='+t.id+'">'+
+        DSUI.crest(t,88)+
+        '<div class="tile-body"><div class="name">'+DSUI.esc(t.name)+'</div>'+
+        '<div class="meta">'+DSUI.esc(t.cause)+'</div></div>'+
+        '</a>';
+    }).join('') : '<p class="center muted" style="grid-column:1/-1;padding:60px 0">No teams match that search.</p>';
+    document.getElementById('team-count').textContent=list.length+' of '+DS.activeTeams().length+' teams';
+  }
+  document.querySelector('[data-search]').addEventListener('input',function(){
+    state.q=this.value.trim().toLowerCase(); render();
+  });
+  render();
+  DS.loadOrgs().then(function(ok){ if(ok) render(); });
+})();
+</script>
+</body>
+</html>

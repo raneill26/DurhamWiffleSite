@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Register and sign the waiver | Durham Wiffle Ball</title>
+<meta name="description" content="Register for the Durham Wiffle Ball season, complete the required player liability waiver, and pay your fee.">
+<link rel="icon" href="https://playdurham.com/wp-content/uploads/2024/04/2024-Wiffle-Ball-Logo.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/site.css?v=w601430">
+</head>
+<body>
+<div data-header="register.html"></div>
+
+<div class="page-head">
+  <img class="page-head-bg" src="https://playdurham.com/wp-content/uploads/2024/04/Promo_03-1024x487.jpg" alt="">
+  <div class="wrap">
+    <div class="crumb">Play this season</div>
+    <h1 class="h-lg">Register</h1>
+    <p>Every player completes the liability waiver for 2026, even if you played in 2025.</p>
+  </div>
+</div>
+
+<main class="section">
+  <div class="wrap wrap-narrow">
+    <div class="steps">
+      <div class="step" data-on="true">1. Your details</div>
+      <div class="step" data-on="true">2. Waiver</div>
+      <div class="step" data-on="true">3. Payment</div>
+    </div>
+
+    <div id="config-warning"></div>
+    <div id="reg-closed" class="hide"></div>
+
+    <form class="form-card" id="reg-form" novalidate>
+      <div id="msg"></div>
+
+      <h2 class="h-sm" style="margin-bottom:18px">Your details</h2>
+      <div class="field-row">
+        <label for="fullName">Full name</label>
+        <input type="text" id="fullName" name="fullName" autocomplete="name" required>
+      </div>
+      <div class="field-row">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" autocomplete="email" required>
+        <div class="hint">Used for schedule updates, rainouts, and your waiver receipt.</div>
+      </div>
+      <div class="field-row">
+        <label for="phone">Mobile number (optional)</label>
+        <input type="tel" id="phone" name="phone" autocomplete="tel">
+      </div>
+      <div class="field-row">
+        <label for="teamId">Preferred team</label>
+        <select class="field" id="teamId" style="width:100%"></select>
+        <div class="hint">The league balances teams and will confirm where you end up.</div>
+      </div>
+      <div class="field-row">
+        <label for="shirtSize">Shirt size</label>
+        <select class="field" id="shirtSize" style="width:100%" required>
+          <option value="">Choose a size</option>
+          <option>XS</option><option>S</option><option>M</option><option>L</option>
+          <option>XL</option><option>2XL</option><option>3XL</option>
+        </select>
+        <div class="hint">Every player gets a custom jersey.</div>
+      </div>
+
+      <h2 class="h-sm" style="margin:30px 0 14px">Liability waiver</h2>
+      <p class="muted" style="font-size:.9rem;margin-bottom:12px">
+        Each statement below must be agreed to separately, the same as on the league's paper form.
+      </p>
+      <div class="waiver-box" id="waiver-text" tabindex="0"></div>
+      <div id="clause-checks"></div>
+
+      <div class="check-row">
+        <input type="checkbox" id="agree18" required>
+        <label for="agree18">
+          I am 18 years of age or older and am signing on my own behalf. I understand that typing my
+          name below is my electronic signature and is intended to have the same effect as signing on paper.
+        </label>
+      </div>
+
+      <div class="field-row">
+        <label>Signature</label>
+        <div class="sig-tabs" role="tablist">
+          <button type="button" role="tab" data-sig="draw" aria-selected="true">Draw</button>
+          <button type="button" role="tab" data-sig="type" aria-selected="false">Type</button>
+        </div>
+
+        <div data-sig-panel="draw">
+          <div class="sig-pad-wrap">
+            <canvas class="sig-pad" id="sig-pad"></canvas>
+            <div class="sig-baseline"></div>
+            <div class="sig-hint" id="sig-hint">Sign here with your finger or mouse</div>
+          </div>
+          <div class="sig-actions">
+            <button type="button" class="btn btn-outline btn-sm" id="sig-clear">Clear</button>
+            <span class="hint" style="margin:0">Your drawn signature is saved with the waiver.</span>
+          </div>
+        </div>
+
+        <div data-sig-panel="type" class="hide">
+          <input type="text" id="signedNameTyped" class="sig-input" autocomplete="off"
+                 placeholder="Type your full name" style="width:100%">
+        </div>
+
+        <div class="field-row" style="margin-top:16px;margin-bottom:0">
+          <label for="signedName">Confirm your full name</label>
+          <input type="text" id="signedName" autocomplete="off" required>
+          <div class="hint" id="sig-date"></div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-lg" type="submit" style="width:100%" id="submit-btn">
+        Sign waiver and continue
+      </button>
+      <p class="muted" style="font-size:.82rem;margin-top:14px;text-align:center">
+        We store your name, email, and the exact waiver text you agreed to. Nothing else, and nothing is shared.
+      </p>
+    </form>
+
+    <div class="form-card hide" id="done-card">
+      <div class="form-msg ok" id="done-msg"></div>
+      <h2 class="h-sm" style="margin-bottom:12px">Last step: registration fee</h2>
+      <p class="muted" style="font-size:.95rem;margin-bottom:20px" id="fee-copy"></p>
+      <div class="btn-row" id="pay-row"></div>
+      <p class="muted" style="font-size:.82rem;margin-top:18px">
+        Payment is handled by our processor. Card details never touch this site.
+      </p>
+    </div>
+  </div>
+</main>
+
+<div data-footer></div>
+<script src="assets/js/config.js?v=w601430"></script>
+<script src="assets/js/data.js?v=w601430"></script>
+<script src="assets/js/api.js?v=w601430"></script>
+<script src="assets/js/site.js?v=w601430"></script>
+<script src="assets/js/waiver.js?v=w601430"></script>
+<script>
+(function(){
+  var form=document.getElementById('reg-form');
+  var msg=document.getElementById('msg');
+  var box=document.getElementById('waiver-text');
+  box.innerHTML = DS_WAIVER.html;
+
+  // one required checkbox per clause, mirroring the league's own form
+  document.getElementById('clause-checks').innerHTML = DS_WAIVER.clauses.map(function(c,i){
+    return '<div class="check-row">'+
+      '<input type="checkbox" id="c'+i+'" data-clause required>'+
+      '<label for="c'+i+'">I have read and agree to statement '+(i+1)+'.</label></div>';
+  }).join('');
+
+  // team dropdown from the live 2026 roster
+  var teamSel=document.getElementById('teamId');
+  teamSel.innerHTML='<option value="">Free Agent</option>'+
+    DS.activeTeams().slice().sort(function(a,b){return a.name.localeCompare(b.name);})
+      .map(function(t){return '<option value="'+t.id+'">'+DSUI.esc(t.name)+' ('+t.league+')</option>';}).join('');
+
+  /* ---------------- signature pad ---------------- */
+  var pad=document.getElementById('sig-pad');
+  var ctx=pad && pad.getContext ? pad.getContext('2d') : null;
+  var drawing=false, hasInk=false, last=null;
+
+  // No canvas support: hide the draw option and fall back to typing.
+  if(!ctx){
+    document.querySelector('[data-sig-panel="draw"]').classList.add('hide');
+    document.querySelector('[data-sig="draw"]').classList.add('hide');
+    document.querySelector('[data-sig="type"]').setAttribute('aria-selected','true');
+    document.querySelector('[data-sig-panel="type"]').classList.remove('hide');
+  }
+
+  function sizePad(){
+    if(!ctx) return;
+    var ratio=window.devicePixelRatio||1;
+    var w=pad.clientWidth, h=pad.clientHeight;
+    var prev = hasInk ? pad.toDataURL() : null;
+    pad.width=w*ratio; pad.height=h*ratio;
+    ctx.setTransform(ratio,0,0,ratio,0,0);
+    ctx.lineWidth=2.2; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#16212B';
+    if(prev){ var img=new Image(); img.onload=function(){ctx.drawImage(img,0,0,w,h);}; img.src=prev; }
+  }
+  function pos(e){
+    var r=pad.getBoundingClientRect();
+    var p=e.touches?e.touches[0]:e;
+    return {x:p.clientX-r.left, y:p.clientY-r.top};
+  }
+  function start(e){ if(!ctx) return; e.preventDefault(); drawing=true; last=pos(e); }
+  function move(e){
+    if(!drawing||!ctx) return; e.preventDefault();
+    var p=pos(e);
+    ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke();
+    last=p;
+    if(!hasInk){ hasInk=true; document.getElementById('sig-hint').style.display='none'; }
+  }
+  function end(){ drawing=false; }
+
+  ['mousedown','touchstart'].forEach(function(ev){pad.addEventListener(ev,start,{passive:false});});
+  ['mousemove','touchmove'].forEach(function(ev){pad.addEventListener(ev,move,{passive:false});});
+  ['mouseup','mouseleave','touchend','touchcancel'].forEach(function(ev){pad.addEventListener(ev,end);});
+
+  document.getElementById('sig-clear').addEventListener('click',function(){
+    if(ctx) ctx.clearRect(0,0,pad.width,pad.height);
+    hasInk=false;
+    document.getElementById('sig-hint').style.display='';
+  });
+  window.addEventListener('resize',sizePad);
+  sizePad();
+
+  var sigMode = ctx ? 'draw' : 'type';
+  document.querySelectorAll('[data-sig]').forEach(function(b){
+    b.addEventListener('click',function(){
+      document.querySelectorAll('[data-sig]').forEach(function(o){o.setAttribute('aria-selected','false');});
+      b.setAttribute('aria-selected','true');
+      sigMode=b.getAttribute('data-sig');
+      document.querySelectorAll('[data-sig-panel]').forEach(function(p){
+        p.classList.toggle('hide', p.getAttribute('data-sig-panel')!==sigMode);
+      });
+      if(sigMode==='draw') sizePad();
+    });
+  });
+
+  document.getElementById('sig-date').textContent =
+    'Signing as of ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+
+  // Registration window. Closed replaces the whole form with the league's message.
+  function showClosed(text){
+    document.getElementById('reg-form').classList.add('hide');
+    document.querySelector('.steps').classList.add('hide');
+    var box=document.getElementById('reg-closed');
+    box.classList.remove('hide');
+    box.innerHTML='<div class="form-card"><h2 class="h-sm" style="margin-bottom:14px">Registration is closed</h2>'+
+      '<div class="prose">'+String(text||'').split(/\n{2,}/).map(function(p){
+        return '<p>'+DSUI.esc(p.trim())+'</p>';
+      }).join('')+'</div>'+
+      '<div class="btn-row" style="margin-top:22px">'+
+        '<a class="btn btn-primary" href="mailto:playncinc@gmail.com?subject=Add%20me%20to%20the%20Durham%20Wiffle Ball%20newsletter">Join the newsletter</a>'+
+        '<a class="btn btn-outline" href="about.html#beneficiary">Who we play for</a>'+
+      '</div></div>';
+  }
+
+  if(DSAPI.configured()){
+    DSAPI.getSettings().then(function(cfg){
+      if(cfg.registration_open !== 'true') showClosed(cfg.registration_closed_message);
+    }).catch(function(){ /* leave the form up if settings cannot be read */ });
+  }
+
+  if(!DSAPI.configured()){
+    document.getElementById('config-warning').innerHTML =
+      '<div class="form-msg warn"><strong>Not connected yet.</strong> '+
+      'This form is fully built but has no database behind it until Supabase is set up '+
+      '(see SETUP.md). Submitting will show you the flow without saving anything.</div>';
+  }
+
+  function show(kind,text){ msg.innerHTML='<div class="form-msg '+kind+'">'+text+'</div>'; }
+
+  form.addEventListener('submit',function(e){
+    e.preventDefault();
+    msg.innerHTML='';
+    var data={
+      fullName:document.getElementById('fullName').value.trim(),
+      email:document.getElementById('email').value.trim(),
+      phone:document.getElementById('phone').value.trim(),
+      signedName:document.getElementById('signedName').value.trim(),
+      teamId:document.getElementById('teamId').value||null,
+      shirtSize:document.getElementById('shirtSize').value||null,
+      signatureImage:null
+    };
+
+    if(sigMode==='draw'){
+      if(!hasInk) return show('err','Please draw your signature, or switch to Type.');
+      data.signatureImage=pad.toDataURL('image/png');
+    } else {
+      var typed=document.getElementById('signedNameTyped').value.trim();
+      if(typed.length<2) return show('err','Type your full name to sign, or switch to Draw.');
+      if(typed.replace(/\s+/g,' ').toLowerCase()!==data.signedName.replace(/\s+/g,' ').toLowerCase())
+        return show('err','Your typed signature must match the name you confirmed below it.');
+    }
+    if(data.fullName.length<2) return show('err','Please enter your full name.');
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(data.email)) return show('err','Please enter a valid email address.');
+    var unchecked=[].slice.call(document.querySelectorAll('[data-clause]')).filter(function(c){return !c.checked;});
+    if(unchecked.length) return show('err','You must agree to every statement in the waiver. '+
+      unchecked.length+' still unchecked.');
+    if(!data.shirtSize) return show('err','Pick a shirt size.');
+    if(!document.getElementById('agree18').checked)
+      return show('err','You must confirm you are 18 or older and signing for yourself.');
+    if(data.signedName.length<2) return show('err','Confirm your full name under the signature.');
+    if(data.signedName.replace(/\s+/g,' ').toLowerCase()!==data.fullName.replace(/\s+/g,' ').toLowerCase())
+      return show('err','The name under your signature must match the full name you entered above.');
+
+    var btn=document.getElementById('submit-btn');
+    btn.disabled=true; btn.textContent='Saving…';
+
+    function finish(saved){
+      form.classList.add('hide');
+      var done=document.getElementById('done-card');
+      done.classList.remove('hide');
+      document.getElementById('done-msg').innerHTML = saved
+        ? '<strong>Waiver signed.</strong> A copy of what you agreed to is on file.'
+        : '<strong>Demo only.</strong> Nothing was saved because the database is not connected yet.';
+      var fee=DS_CONFIG.REGISTRATION_FEE_URL;
+      document.getElementById('fee-copy').textContent = fee
+        ? 'Your spot is held once the fee is paid. Every dollar goes into the season donation pool.'
+        : 'No payment link is configured yet. Add REGISTRATION_FEE_URL in assets/js/config.js.';
+      document.getElementById('pay-row').innerHTML =
+        (fee?'<a class="btn btn-primary btn-lg" href="'+fee+'">Pay '+DSUI.esc(DS_CONFIG.REGISTRATION_FEE_LABEL)+'</a>':'')+
+        '<a class="btn btn-outline btn-lg" href="'+DS_CONFIG.DONATE_URL+'" target="_blank" rel="noopener">Add a donation</a>';
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+
+    // Registration window. Closed replaces the whole form with the league's message.
+  function showClosed(text){
+    document.getElementById('reg-form').classList.add('hide');
+    document.querySelector('.steps').classList.add('hide');
+    var box=document.getElementById('reg-closed');
+    box.classList.remove('hide');
+    box.innerHTML='<div class="form-card"><h2 class="h-sm" style="margin-bottom:14px">Registration is closed</h2>'+
+      '<div class="prose">'+String(text||'').split(/\n{2,}/).map(function(p){
+        return '<p>'+DSUI.esc(p.trim())+'</p>';
+      }).join('')+'</div>'+
+      '<div class="btn-row" style="margin-top:22px">'+
+        '<a class="btn btn-primary" href="mailto:playncinc@gmail.com?subject=Add%20me%20to%20the%20Durham%20Wiffle Ball%20newsletter">Join the newsletter</a>'+
+        '<a class="btn btn-outline" href="about.html#beneficiary">Who we play for</a>'+
+      '</div></div>';
+  }
+
+  if(DSAPI.configured()){
+    DSAPI.getSettings().then(function(cfg){
+      if(cfg.registration_open !== 'true') showClosed(cfg.registration_closed_message);
+    }).catch(function(){ /* leave the form up if settings cannot be read */ });
+  }
+
+  if(!DSAPI.configured()){ setTimeout(function(){ finish(false); },400); return; }
+
+    DSAPI.registerPlayer(data, DS_WAIVER.text)
+      .then(function(){ finish(true); })
+      .catch(function(err){
+        btn.disabled=false; btn.textContent='Sign waiver and continue';
+        show('err','Could not save your registration: '+DSUI.esc(err.message));
+      });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>League admin | Durham Wiffle Ball</title>
+<link rel="icon" href="https://playdurham.com/wp-content/uploads/2024/04/2024-Wiffle-Ball-Logo.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/site.css?v=w601430">
+</head>
+<body>
+<div data-header=""></div>
+
+<div class="page-head">
+  <div class="wrap">
+    <div class="crumb">Mentock Power Trip</div>
+    <h1 class="h-lg">League admin</h1>
+  </div>
+</div>
+
+<main class="section">
+  <div class="wrap" id="admin-root"></div>
+</main>
+
+<div data-footer></div>
+<script src="assets/js/config.js?v=w601430"></script>
+<script src="assets/js/data.js?v=w601430"></script>
+<script src="assets/js/api.js?v=w601430"></script>
+<script src="assets/js/site.js?v=w601430"></script>
+<script>
+(function(){
+  var root=document.getElementById('admin-root');
+  var tab='registration';
+
+  function msg(kind,text){
+    return '<div class="form-msg '+kind+'">'+text+'</div>';
+  }
+
+  /* Panels get replaced when tabs switch, so any async write has to check the
+     target still exists before touching it. */
+  function setHTML(id,html){ var el=document.getElementById(id); if(el) el.innerHTML=html; return !!el; }
+  function setText(el,t){ if(el) el.textContent=t; }
+
+  /* ---------------- login ---------------- */
+  function login(err){
+    root.innerHTML='<div class="form-card" style="max-width:460px;margin:0 auto">'+
+      (DSAPI.configured()?'':msg('warn','<strong>Not connected yet.</strong> Add your Supabase keys to '+
+        '<code>assets/js/config.js</code> and run <code>supabase/schema.sql</code> first. See SETUP.md.'))+
+      (err?msg('err',DSUI.esc(err)):'')+
+      '<h2 class="h-sm" style="margin-bottom:16px">Sign in</h2>'+
+      '<div class="field-row"><label for="ap">Admin passcode</label>'+
+      '<input type="password" id="ap" autocomplete="current-password"></div>'+
+      '<button class="btn btn-primary" id="ago" style="width:100%">Sign in</button></div>';
+
+    document.getElementById('ago').addEventListener('click',function(){
+      var v=document.getElementById('ap').value.trim();
+      if(!v) return login('Enter the admin passcode.');
+      if(!DSAPI.configured()) return login('No database connected yet.');
+      this.disabled=true; this.textContent='Checking…';
+      DSAPI.adminLogin(v).then(shell).catch(function(err){
+        var m=(err && err.message)||'';
+        login(/invalid passcode/i.test(m) ? 'That passcode did not match.'
+                                          : 'Sign-in failed: '+m);
+      });
+    });
+    document.getElementById('ap').addEventListener('keydown',function(e){
+      if(e.key==='Enter'){e.preventDefault();document.getElementById('ago').click();}
+    });
+  }
+
+  /* ---------------- shell ---------------- */
+  function shell(){
+    root.innerHTML=
+      '<div class="admin-tabs">'+
+        ['registration','rosters','results','seasons','schedule','passcodes'].map(function(t){
+          return '<button data-tab="'+t+'" aria-selected="'+(t===tab)+'">'+t+'</button>';
+        }).join('')+
+        '<span style="margin-left:auto"></span>'+
+        '<button data-tab="_out" style="color:var(--clay)">Sign out</button>'+
+      '</div><div id="panel"></div>';
+
+    root.querySelectorAll('[data-tab]').forEach(function(b){
+      b.addEventListener('click',function(){
+        var t=b.getAttribute('data-tab');
+        if(t==='_out'){ DSAPI.adminLogout(); return login(); }
+        tab=t; shell();
+      });
+    });
+    ({registration:registrationPanel,schedule:schedulePanel,results:resultsPanel,
+      rosters:rostersPanel,seasons:seasonsPanel,passcodes:passPanel})[tab]();
+  }
+
+  function panel(html){ setHTML('panel', html); }
+
+  /* ---------------- photos ---------------- */
+  function photosPanel(){
+    panel('<div class="form-card"><h2 class="h-sm" style="margin-bottom:14px">Add photos</h2>'+
+      '<div class="drop-zone" id="dz">Drag photos here, or <label style="color:var(--clay);cursor:pointer;text-decoration:underline">'+
+      'choose files<input type="file" id="file" accept="image/*" multiple hidden></label></div>'+
+      '<div id="up-msg" style="margin-top:14px"></div>'+
+      '<p class="muted" style="font-size:.85rem;margin-top:14px">'+
+        '<strong>Placement</strong> is where a photo is shown: <em>gallery</em> on the Photos page, '+
+        '<em>home</em> in the homepage strip, <em>hero</em> as a page banner, <em>champions</em> on the '+
+        'Champions page. <strong>Sort</strong> orders them, lowest first.</p></div>'+
+      '<h2 class="h-sm" style="margin:28px 0 14px">Photo library</h2><div id="plist">Loading…</div>');
+
+    var dz=document.getElementById('dz'), input=document.getElementById('file');
+    ['dragenter','dragover'].forEach(function(e){dz.addEventListener(e,function(ev){ev.preventDefault();dz.classList.add('over');});});
+    ['dragleave','drop'].forEach(function(e){dz.addEventListener(e,function(ev){ev.preventDefault();dz.classList.remove('over');});});
+    dz.addEventListener('drop',function(ev){ handle(ev.dataTransfer.files); });
+    input.addEventListener('change',function(){ handle(this.files); });
+
+    function handle(files){
+      var list=[].slice.call(files); if(!list.length) return;
+      var out=document.getElementById('up-msg');
+      out.innerHTML=msg('warn','Uploading '+list.length+' photo'+(list.length>1?'s':'')+'…');
+      Promise.all(list.map(function(f){
+        return DSAPI.uploadPhoto(f).then(function(url){
+          return DSAPI.savePhoto({url:url,caption:f.name.replace(/\.[^.]+$/,''),season_id:null});
+        });
+      })).then(function(){ out.innerHTML=msg('ok','Uploaded.'); loadPhotos(); })
+        .catch(function(e){ out.innerHTML=msg('err','Upload failed: '+DSUI.esc(e.message)); });
+    }
+    loadPhotos();
+  }
+
+  function loadPhotos(){
+    var host=document.getElementById('plist'); if(!host) return;
+    DSAPI.listPhotos().then(function(rows){
+      if(!rows.length){ host.innerHTML='<p class="muted">No photos uploaded yet.</p>'; return; }
+      host.innerHTML=rows.map(function(p){
+        return '<div class="admin-item" data-id="'+p.id+'">'+
+          '<img src="'+p.url+'" alt="">'+
+          '<div class="meta">'+
+            '<input type="text" value="'+DSUI.esc(p.caption||'')+'" data-cap placeholder="Caption" '+
+              'style="width:100%;border:1px solid var(--line);border-radius:4px;padding:7px 9px;font-size:.9rem">'+
+            '<input type="text" value="'+DSUI.esc(p.season_id||'')+'" data-season placeholder="Season id, e.g. 2026-summer" '+
+              'style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:4px;padding:7px 9px;font-size:.85rem">'+
+            '<div style="display:flex;gap:6px;margin-top:6px">'+
+              '<select data-place style="flex:1;border:1px solid var(--line);border-radius:4px;padding:7px 9px;font-size:.85rem">'+
+                ['gallery','home','hero','champions'].map(function(pl){
+                  return '<option value="'+pl+'"'+((p.placement||'gallery')===pl?' selected':'')+'>'+pl+'</option>';
+                }).join('')+
+              '</select>'+
+              '<input type="number" data-sort value="'+(p.sort_order||0)+'" title="Sort order" '+
+                'style="width:78px;border:1px solid var(--line);border-radius:4px;padding:7px 9px;font-size:.85rem">'+
+            '</div>'+
+          '</div>'+
+          '<div style="display:flex;flex-direction:column;gap:6px">'+
+            '<button class="btn btn-outline btn-sm" data-save>Save</button>'+
+            '<button class="btn btn-outline btn-sm" data-del style="color:var(--loss)">Delete</button>'+
+          '</div></div>';
+      }).join('');
+
+      host.querySelectorAll('.admin-item').forEach(function(row){
+        var id=row.getAttribute('data-id');
+        row.querySelector('[data-save]').addEventListener('click',function(){
+          this.textContent='Saving…';
+          DSAPI.savePhoto({id:id,url:row.querySelector('img').src,
+            caption:row.querySelector('[data-cap]').value,
+            season_id:row.querySelector('[data-season]').value||null,
+            sort_order:parseInt(row.querySelector('[data-sort]').value,10)||0})
+            .then(function(){
+              return DSAPI.setPhotoPlacement(id, row.querySelector('[data-place]').value,
+                                             parseInt(row.querySelector('[data-sort]').value,10)||0);
+            })
+            .then(function(){ row.querySelector('[data-save]').textContent='Saved'; })
+            .catch(function(e){ alert('Could not save: '+e.message); });
+        });
+        row.querySelector('[data-del]').addEventListener('click',function(){
+          if(!confirm('Delete this photo?')) return;
+          DSAPI.deletePhoto(id).then(loadPhotos);
+        });
+      });
+    }).catch(function(e){ host.innerHTML=msg('err','Could not load photos: '+DSUI.esc(e.message)); });
+  }
+
+  /* ---------------- champions ---------------- */
+  function champsPanel(){
+    panel('<div class="form-card"><h2 class="h-sm" style="margin-bottom:14px">Record a champion</h2>'+
+      '<div class="field-row"><label for="cl">Season label</label><input type="text" id="cl" placeholder="Season/Year"></div>'+
+      '<div class="field-row"><label for="ct">Winning team</label><input type="text" id="ct" placeholder="Champion"></div>'+
+      '<div class="field-row"><label for="cp">Check photo URL</label><input type="text" id="cp" placeholder="Paste photo URL, or upload on the Photos tab first"></div>'+
+      '<button class="btn btn-primary" id="csave">Add champion</button><div id="cmsg" style="margin-top:12px"></div></div>'+
+      '<h2 class="h-sm" style="margin:28px 0 14px">Recorded champions</h2><div id="clist">Loading…</div>');
+
+    document.getElementById('csave').addEventListener('click',function(){
+      var label=document.getElementById('cl').value.trim();
+      if(!label) return setHTML('cmsg', msg('err','Season label is required.'));
+      DSAPI.saveChampion({label:label,team_name:document.getElementById('ct').value.trim(),
+        league:document.getElementById('cg').value.trim(),photo_url:document.getElementById('cp').value.trim()})
+        .then(function(){ setHTML('cmsg', msg('ok','Added.')); loadChamps(); })
+        .catch(function(e){ setHTML('cmsg', msg('err',DSUI.esc(e.message))); });
+    });
+    loadChamps();
+  }
+  function loadChamps(){
+    var host=document.getElementById('clist'); if(!host) return;
+    DSAPI.listChampions().then(function(rows){
+      host.innerHTML=rows.length?rows.map(function(c){
+        return '<div class="admin-item" data-id="'+c.id+'">'+
+          (c.photo_url?'<img src="'+c.photo_url+'" alt="">':'<div></div>')+
+          '<div class="meta"><b>'+DSUI.esc(c.label)+'</b>'+
+          '<span>'+DSUI.esc([c.league,c.team_name].filter(Boolean).join(' League: ')||'Team not recorded')+'</span></div>'+
+          '<button class="btn btn-outline btn-sm" data-del style="color:var(--loss)">Delete</button></div>';
+      }).join(''):'<p class="muted">No champions recorded yet.</p>';
+      host.querySelectorAll('[data-del]').forEach(function(b){
+        b.addEventListener('click',function(){
+          var id=b.closest('.admin-item').getAttribute('data-id');
+          if(confirm('Delete this champion?')) DSAPI.deleteChampion(id).then(loadChamps);
+        });
+      });
+    }).catch(function(e){ host.innerHTML=msg('err',DSUI.esc(e.message)); });
+  }
+
+  /* ---------------- seasons ---------------- */
+  function seasonsPanel(){
+    panel('<div class="form-card"><h2 class="h-sm" style="margin-bottom:6px">Start a new season</h2>'+
+      '<div class="field-row"><label for="sid">Season id</label><input type="text" id="sid" placeholder="2027-spring">'+
+      '<div class="hint">Lowercase, no spaces. Used internally.</div></div>'+
+      '<div class="field-row"><label for="slab">Display name</label><input type="text" id="slab" placeholder="2027 Spring"></div>'+
+      '<div class="field-row"><label for="sdate">First game day</label><input type="text" id="sdate" placeholder="2027-03-14"></div>'+
+      '<div class="check-row"><input type="checkbox" id="scopy" checked><label for="scopy">Carry this season’s charities over as teams</label></div>'+
+      '<div class="check-row"><input type="checkbox" id="scur" checked><label for="scur">Make it the live season straight away</label></div>'+
+      '<button class="btn btn-primary" id="snew">Create season</button><div id="smsg" style="margin-top:12px"></div></div>'+
+      '<h2 class="h-sm" style="margin:28px 0 14px">All seasons</h2><div id="slist">Loading…</div>');
+
+    document.getElementById('snew').addEventListener('click',function(){
+      var id=document.getElementById('sid').value.trim();
+      var label=document.getElementById('slab').value.trim();
+      if(!id||!label) return setHTML('smsg', msg('err','Season id and display name are both required.'));
+      this.disabled=true; this.textContent='Creating…';
+      DSAPI.newSeason({id:id,label:label,starts_on:document.getElementById('sdate').value.trim()||null,
+        copy_teams:document.getElementById('scopy').checked,make_current:document.getElementById('scur').checked})
+        .then(function(){ seasonsPanel(); })
+        .catch(function(e){
+          document.getElementById('snew').disabled=false;
+          document.getElementById('snew').textContent='Create season';
+          setHTML('smsg', msg('err',DSUI.esc(e.message)));
+        });
+    });
+    loadSeasons();
+  }
+  function loadSeasons(){
+    var host=document.getElementById('slist'); if(!host) return;
+    DSAPI.listSeasons().then(function(rows){
+      host.innerHTML=rows.length?rows.map(function(s){
+        return '<div class="admin-item" data-id="'+DSUI.esc(s.id)+'"><div></div>'+
+          '<div class="meta"><b>'+DSUI.esc(s.label)+(s.is_current?' <span class="pill pill-gold">Live</span>':'')+'</b>'+
+          '<span>'+DSUI.esc(s.id)+' · '+s.team_count+' teams'+(s.starts_on?' · opens '+s.starts_on:'')+'</span></div>'+
+          (s.is_current?'<div></div>':'<button class="btn btn-outline btn-sm" data-cur>Make live</button>')+'</div>';
+      }).join(''):'<p class="muted">No seasons yet.</p>';
+      host.querySelectorAll('[data-cur]').forEach(function(b){
+        b.addEventListener('click',function(){
+          DSAPI.setCurrentSeason(b.closest('.admin-item').getAttribute('data-id')).then(loadSeasons);
+        });
+      });
+    }).catch(function(e){ host.innerHTML=msg('err',DSUI.esc(e.message)); });
+  }
+
+  /* ---------------- team passcodes ---------------- */
+  function passPanel(){
+    panel('<div class="form-card"><h2 class="h-sm" style="margin-bottom:6px">Team passcodes</h2>'+
+      '<p class="muted" style="font-size:.9rem;margin-bottom:18px">Captains use these to log attendance. '+
+      '</p>'+
+      DS.TEAMS.map(function(t){
+        return '<div class="admin-item" data-id="'+t.id+'"><img src="'+t.logo+'" alt="">'+
+          '<div class="meta"><b>'+DSUI.esc(t.name)+'</b>'+
+          '<input type="text" data-code placeholder="New passcode" '+
+          'style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:4px;padding:7px 9px;font-size:.9rem"></div>'+
+          '<button class="btn btn-outline btn-sm" data-set>Set</button></div>';
+      }).join('')+'</div>');
+
+    document.querySelectorAll('[data-set]').forEach(function(b){
+      b.addEventListener('click',function(){
+        var row=b.closest('.admin-item');
+        var code=row.querySelector('[data-code]').value.trim();
+        if(code.length<4) return alert('Use at least 4 characters.');
+        b.textContent='Saving…';
+        DSAPI.setTeamPasscode(row.getAttribute('data-id'),code)
+          .then(function(){ b.textContent='Set'; row.querySelector('[data-code]').value=''; })
+          .catch(function(e){ b.textContent='Set'; alert(e.message); });
+      });
+    });
+  }
+
+  /* ---------------- registration ---------------- */
+  function registrationPanel(){
+    panel('<div id="reg-toggle">Loading…</div>'+
+      '<h2 class="h-sm" style="margin:26px 0 12px">Sign-ups</h2>'+
+      '<p class="muted" style="font-size:.9rem;margin-bottom:14px">Players preferred team shows here when '+
+      'they register. They only join a roster once they are officially assigned here.</p>'+
+      '<div style="overflow-x:auto"><div id="reg-table">Loading…</div></div>'+
+      '<div class="form-card" style="margin-top:26px;border-color:#E8C9C5">'+
+        '<h3 class="h-sm" style="margin-bottom:8px">Clear the player base</h3>'+
+        '<p class="muted" style="font-size:.9rem;margin-bottom:14px">Wipes every player in the current '+
+        'season, with their waivers, payment status and attendance. Season reset basically. '+
+        'Teams, games and results are untouched.</p>'+
+        '<div class="field-row"><label>Type CLEAR to confirm</label><input type="text" id="clr"></div>'+
+        '<button class="btn btn-outline btn-sm" id="clrgo" style="color:var(--loss)">Clear players</button>'+
+        '<div id="clrmsg" style="margin-top:12px"></div>'+
+      '</div>');
+
+    document.getElementById('clrgo').addEventListener('click',function(){
+      var v=document.getElementById('clr').value.trim();
+      if(v!=='CLEAR') return setHTML('clrmsg', msg('err','Type CLEAR exactly to confirm.'));
+      if(!confirm('Delete every player in the live season? This cannot be undone.')) return;
+      DSAPI.clearPlayers(null,v)
+        .then(function(n){ setHTML('clrmsg', msg('ok',n+' players removed.')); loadRegs(); })
+        .catch(function(e){ setHTML('clrmsg', msg('err',DSUI.esc(e.message))); });
+    });
+
+    loadRegToggle();
+    loadRegs();
+  }
+
+  function loadRegToggle(){
+    DSAPI.getSettings().then(function(cfg){
+      var open = cfg.registration_open === 'true';
+      setHTML('reg-toggle',
+        '<div class="toggle-row">'+
+          '<label class="switch"><input type="checkbox" id="regopen"'+(open?' checked':'')+'><span></span></label>'+
+          '<div><b>Registration '+(open?'open':'closed')+'</b>'+
+          '<div class="muted" style="font-size:.85rem">'+
+            (open?'The register page is live and accepting sign-ups.'
+                 :'The register page shows the message below instead of the form.')+'</div></div>'+
+        '</div>'+
+        '<div class="form-card"><div class="field-row">'+
+          '<label>Closed message</label>'+
+          '<textarea id="regmsg" rows="7" style="width:100%;border:1px solid var(--line-2);'+
+            'border-radius:var(--r-sm);padding:12px 14px;font-family:var(--body);font-size:1rem;'+
+            'color:var(--text)">'+DSUI.esc(cfg.registration_closed_message||'')+'</textarea>'+
+          '<div class="hint">Blank lines start a new paragraph.</div></div>'+
+          '<button class="btn btn-primary btn-sm" id="regsave">Save message</button>'+
+          '<div id="regsmsg" style="margin-top:12px"></div></div>');
+
+      document.getElementById('regopen').addEventListener('change',function(){
+        var on=this.checked;
+        DSAPI.setSetting('registration_open', on?'true':'false')
+          .then(loadRegToggle)
+          .catch(function(e){ alert(e.message); });
+      });
+      document.getElementById('regsave').addEventListener('click',function(){
+        DSAPI.setSetting('registration_closed_message', document.getElementById('regmsg').value)
+          .then(function(){ setHTML('regsmsg', msg('ok','Saved.')); })
+          .catch(function(e){ setHTML('regsmsg', msg('err',DSUI.esc(e.message))); });
+      });
+    }).catch(function(e){ setHTML('reg-toggle', msg('err',DSUI.esc(e.message))); });
+  }
+
+  function teamName(id){ var t=DS.byId[id]; return t?t.short:(id||''); }
+
+  var regFilter = 'all';
+
+  function loadRegs(){
+    var host=document.getElementById('reg-table'); if(!host) return;
+    DSAPI.registrations().then(function(rows){
+      if(!rows.length){ host.innerHTML='<p class="muted">No sign-ups yet.</p>'; return; }
+
+      var teams = DS.activeTeams().slice().sort(function(a,b){return a.name.localeCompare(b.name);});
+      function teamOpts(sel){
+        return '<option value="">Unassigned</option>'+teams.map(function(t){
+          return '<option value="'+t.id+'"'+(sel===t.id?' selected':'')+'>'+DSUI.esc(t.name)+'</option>';
+        }).join('');
+      }
+
+      var shown = rows.filter(function(r){
+        if(regFilter==='all') return true;
+        if(regFilter==='none') return !r.team_id;
+        return r.team_id===regFilter;
+      });
+      var assigned=rows.filter(function(r){return r.team_id;}).length;
+
+      host.innerHTML=
+        '<div class="toolbar" style="margin-bottom:12px">'+
+          '<select class="field" id="reg-filter">'+
+            '<option value="all"'+(regFilter==='all'?' selected':'')+'>All players ('+rows.length+')</option>'+
+            '<option value="none"'+(regFilter==='none'?' selected':'')+'>Not assigned ('+(rows.length-assigned)+')</option>'+
+            teams.map(function(t){
+              var n=rows.filter(function(r){return r.team_id===t.id;}).length;
+              return '<option value="'+t.id+'"'+(regFilter===t.id?' selected':'')+'>'+
+                     DSUI.esc(t.name)+' ('+n+')</option>';
+            }).join('')+
+          '</select>'+
+          '<span class="spacer"></span>'+
+          '<span class="muted" style="font-size:.85rem">'+shown.length+' shown &middot; '+
+            assigned+' of '+rows.length+' assigned</span>'+
+        '</div>'+
+        '<table class="reg-table"><thead><tr>'+
+          '<th>Player</th><th>Email</th><th>Phone</th><th>Shirt</th>'+
+          '<th>Waiver</th><th>Paid</th><th>Preferred</th><th>Team</th><th></th>'+
+        '</tr></thead><tbody>'+
+        shown.map(function(r){
+          return '<tr class="'+(r.team_id?'assigned':'')+'" data-p="'+r.player_id+'">'+
+            '<td><input type="text" data-name value="'+DSUI.esc(r.full_name)+'" style="width:150px"></td>'+
+            '<td><input type="text" data-email value="'+DSUI.esc(r.email||'')+'" style="width:190px"></td>'+
+            '<td><input type="text" data-phone value="'+DSUI.esc(r.phone||'')+'" style="width:110px"></td>'+
+            '<td><select data-shirt>'+['','XS','S','M','L','XL','2XL','3XL'].map(function(z){
+                  return '<option'+(r.shirt_size===z?' selected':'')+'>'+z+'</option>';}).join('')+'</select></td>'+
+            '<td><input type="checkbox" data-waiver'+(r.waiver_signed?' checked':'')+'></td>'+
+            '<td><input type="checkbox" data-paid'+(r.paid?' checked':'')+'></td>'+
+            '<td>'+DSUI.esc(teamName(r.preferred_team_id)||'-')+'</td>'+
+            '<td><select data-assign>'+teamOpts(r.team_id)+'</select></td>'+
+            '<td style="white-space:nowrap">'+
+              '<button class="btn btn-outline btn-sm" data-save>Save</button> '+
+              '<button class="btn btn-outline btn-sm" data-del style="color:var(--loss)">&times;</button>'+
+            '</td></tr>';
+        }).join('')+'</tbody></table>'+
+        '<div class="form-card" style="margin-top:20px">'+
+          '<h3 class="h-sm" style="margin-bottom:8px">Merge duplicates</h3>'+
+          '<p class="muted" style="font-size:.88rem;margin-bottom:12px">Someone entered by hand and '+
+          'again through registration shows up twice. Merge folds the duplicate into the record you '+
+          'keep: blanks are filled in, a waiver or payment on either is kept, attendance moves across, '+
+          'then the duplicate is deleted.</p>'+
+          '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">'+
+            '<div class="field-row" style="flex:1;min-width:200px;margin:0"><label>Keep</label>'+
+              '<select class="field" id="mkeep" style="width:100%">'+rows.map(function(r){
+                return '<option value="'+r.player_id+'">'+DSUI.esc(r.full_name)+
+                       (r.email?' ('+DSUI.esc(r.email)+')':' (no email)')+'</option>';}).join('')+'</select></div>'+
+            '<div class="field-row" style="flex:1;min-width:200px;margin:0"><label>Remove</label>'+
+              '<select class="field" id="mdrop" style="width:100%">'+rows.map(function(r){
+                return '<option value="'+r.player_id+'">'+DSUI.esc(r.full_name)+
+                       (r.email?' ('+DSUI.esc(r.email)+')':' (no email)')+'</option>';}).join('')+'</select></div>'+
+            '<button class="btn btn-primary btn-sm" id="mgo">Merge</button>'+
+          '</div><div id="mmsg" style="margin-top:12px"></div>'+
+        '</div>';
+
+      document.getElementById('reg-filter').addEventListener('change',function(){
+        regFilter=this.value; loadRegs();
+      });
+
+      document.getElementById('mgo').addEventListener('click',function(){
+        var keep=document.getElementById('mkeep').value, drop=document.getElementById('mdrop').value;
+        if(keep===drop) return setHTML('mmsg', msg('err','Pick two different people.'));
+        if(!confirm('Merge and delete the duplicate? This cannot be undone.')) return;
+        DSAPI.mergePlayers(keep,drop)
+          .then(function(){ loadRegs(); })
+          .catch(function(e){ setHTML('mmsg', msg('err',DSUI.esc(e.message))); });
+      });
+
+      host.querySelectorAll('tbody tr').forEach(function(row){
+        var id=row.getAttribute('data-p');
+        function val(sel){ var e=row.querySelector(sel); return e?e.value.trim():''; }
+
+        row.querySelector('[data-save]').addEventListener('click',function(){
+          var b=this; b.textContent='…';
+          DSAPI.updatePlayer({ id:id, full_name:val('[data-name]'), email:val('[data-email]'),
+              phone:val('[data-phone]'), shirt_size:val('[data-shirt]'),
+              team_id:val('[data-assign]') })
+            .then(function(){ b.textContent='Saved'; setTimeout(function(){b.textContent='Save';},1200); })
+            .catch(function(e){ b.textContent='Save'; alert(e.message); });
+        });
+        row.querySelector('[data-del]').addEventListener('click',function(){
+          if(confirm('Remove this player from the season?')) DSAPI.deletePlayer(id).then(loadRegs);
+        });
+        row.querySelector('[data-waiver]').addEventListener('change',function(){
+          var cb=this;
+          DSAPI.setWaiver(id, cb.checked).catch(function(e){ alert(e.message); cb.checked=!cb.checked; });
+        });
+        row.querySelector('[data-paid]').addEventListener('change',function(){
+          var cb=this;
+          DSAPI.setPaid(id, cb.checked).catch(function(e){ alert(e.message); cb.checked=!cb.checked; });
+        });
+        row.querySelector('[data-assign]').addEventListener('change',function(){
+          var sel=this;
+          DSAPI.assignTeam(id, sel.value)
+            .then(function(){ row.className = sel.value?'assigned':''; })
+            .catch(function(e){ alert(e.message); });
+        });
+      });
+    }).catch(function(e){ setHTML('reg-table', msg('err',DSUI.esc(e.message))); });
+  }
+
+  /* ---------------- partners / organizations ---------------- */
+  function orgForm(o){
+    o = o || { id:'', name:'', short_name:'', cause:'', blurb:'', logo_url:'',
+               website:'', legacy_url:'', status:'inactive', league:null };
+    var isNew = !o.id;
+    function inp(k,label,ph,val){
+      return '<div class="field-row"><label>'+label+'</label>'+
+        '<input type="text" data-f="'+k+'" value="'+DSUI.esc(val||'')+'" placeholder="'+DSUI.esc(ph||'')+'"></div>';
+    }
+    return '<div class="form-card" data-org="'+DSUI.esc(o.id)+'">'+
+      '<h2 class="h-sm" style="margin-bottom:14px">'+(isNew?'Add a partner':DSUI.esc(o.name))+'</h2>'+
+      (isNew ? inp('id','Id','shortname, letters and digits only',o.id)
+             : '<input type="hidden" data-f="id" value="'+DSUI.esc(o.id)+'">')+
+      inp('name','Name','Animal Protection Society of Durham',o.name)+
+      inp('short_name','Short name','APS of Durham',o.short_name)+
+      inp('cause','One-line cause','Shelter and care for animals',o.cause)+
+      '<div class="field-row"><label>Description</label>'+
+        '<textarea data-f="blurb" rows="5" placeholder="Full write-up" '+
+        'style="width:100%;border:1px solid var(--line-2);border-radius:var(--r-sm);padding:12px 14px;'+
+        'font-family:var(--body);font-size:1rem;color:var(--text)">'+DSUI.esc(o.blurb||'')+'</textarea></div>'+
+      inp('logo_url','Logo path','https://playdurham.com/wp-content/uploads/2024/04/2024-Wiffle-Ball-Logo.jpg',o.logo_url)+
+      inp('website','Their website','https://www.apsofdurham.org/',o.website)+
+      '<div style="display:flex;gap:12px;flex-wrap:wrap">'+
+        '<div class="field-row" style="flex:1;min-width:160px"><label>Status</label>'+
+          '<select class="field" data-f="status" style="width:100%">'+
+            ['active','inactive','former'].map(function(st){
+              return '<option value="'+st+'"'+(o.status===st?' selected':'')+'>'+
+                     ({active:'Active partner',inactive:'Inactive partner',former:'Past partner'})[st]+'</option>';
+            }).join('')+'</select></div>'+
+        '<div class="field-row" style="flex:1;min-width:160px"><label>League this season</label>'+
+          '<select class="field" data-f="league" style="width:100%">'+
+            '<option value="">Not playing</option>'+
+            ['A','B'].map(function(L){return '<option value="'+L+'"'+(o.league===L?' selected':'')+'>'+L+' League</option>';}).join('')+
+          '</select></div>'+
+      '</div>'+
+      '<p class="muted" style="font-size:.84rem;margin-bottom:14px">An active partner must have '+
+        'a league set</p>'+
+      '<div class="btn-row">'+
+        '<button class="btn btn-primary btn-sm" data-osave>'+(isNew?'Create partner':'Save changes')+'</button>'+
+        (isNew?'':'<button class="btn btn-outline btn-sm" data-odel style="color:var(--loss)">Delete</button>')+
+        (isNew?'':'<a class="btn btn-outline btn-sm" href="team.html?id='+DSUI.esc(o.id)+'" target="_blank">View page</a>')+
+      '</div><div data-omsg style="margin-top:12px"></div></div>';
+  }
+
+  function wireOrgForm(card, after){
+    card.querySelector('[data-osave]').addEventListener('click',function(){
+      var b=this, data={};
+      card.querySelectorAll('[data-f]').forEach(function(el){ data[el.getAttribute('data-f')]=el.value.trim(); });
+      data.league = data.league || null;
+      if(data.status==='active' && !data.league){
+        card.querySelector('[data-omsg]').innerHTML=msg('err','An active partner needs a league.'); return;
+      }
+      b.disabled=true; b.textContent='Saving…';
+      DSAPI.saveOrg(data)
+        .then(function(){ card.querySelector('[data-omsg]').innerHTML=msg('ok','Saved.'); if(after) after(); })
+        .catch(function(e){ card.querySelector('[data-omsg]').innerHTML=msg('err',DSUI.esc(e.message)); })
+        .then(function(){ b.disabled=false; b.textContent='Save changes'; });
+    });
+    var del=card.querySelector('[data-odel]');
+    if(del) del.addEventListener('click',function(){
+      var id=card.getAttribute('data-org');
+      if(!confirm('Delete '+id+'? Set them to Past partner instead if they have history.')) return;
+      DSAPI.deleteOrg(id).then(after).catch(function(e){ alert(e.message); });
+    });
+  }
+
+  function partnersPanel(){
+    panel('<div id="org-new"></div>'+
+      '<h2 class="h-sm" style="margin:28px 0 14px">All partners</h2>'+
+      '<div id="org-list">Loading…</div>');
+
+    var nw=document.getElementById('org-new');
+    nw.innerHTML=orgForm(null);
+    wireOrgForm(nw.querySelector('[data-org]'), partnersPanel);
+    loadOrgs();
+  }
+
+  function loadOrgs(){
+    var host=document.getElementById('org-list'); if(!host) return;
+    DSAPI.listOrgs().then(function(rows){
+      if(!rows.length){
+        host.innerHTML='<p class="muted">No organizations in the database yet. '+
+          'Run <code>supabase/seed_orgs.sql</code> to load the current 29, or add them above.</p>';
+        return;
+      }
+      host.innerHTML=rows.map(function(o){
+        var label={active:'Active',inactive:'Inactive',former:'Past'}[o.status];
+        return '<div class="admin-item" data-open="'+DSUI.esc(o.id)+'">'+
+          (o.logo_url?'<img src="'+DSUI.esc(o.logo_url)+'" alt="">':'<div></div>')+
+          '<div class="meta"><b>'+DSUI.esc(o.name)+'</b>'+
+          '<span>'+label+(o.league?' · '+o.league+' League':'')+' · '+DSUI.esc(o.cause||'')+'</span></div>'+
+          '<button class="btn btn-outline btn-sm">Edit</button></div>'+
+          '<div data-edit="'+DSUI.esc(o.id)+'" class="hide" style="margin:-4px 0 14px"></div>';
+      }).join('');
+
+      host.querySelectorAll('[data-open]').forEach(function(row){
+        row.querySelector('button').addEventListener('click',function(){
+          var id=row.getAttribute('data-open');
+          var slot=host.querySelector('[data-edit="'+id+'"]');
+          if(!slot.classList.contains('hide')){ slot.classList.add('hide'); slot.innerHTML=''; return; }
+          var o=rows.filter(function(x){return x.id===id;})[0];
+          slot.innerHTML=orgForm(o);
+          slot.classList.remove('hide');
+          wireOrgForm(slot.querySelector('[data-org]'), partnersPanel);
+        });
+      });
+    }).catch(function(e){ setHTML('org-list', msg('err',DSUI.esc(e.message))); });
+  }
+
+  /* Group a flat game list into weeks by distinct date, newest week last. */
+  function weeksFrom(rows){
+    var dates=[]; rows.forEach(function(r){ if(dates.indexOf(r.game_date)===-1) dates.push(r.game_date); });
+    dates.sort();
+    var byDate={}; dates.forEach(function(d,i){ byDate[d]=i+1; });
+    return { dates:dates, weekOf:function(d){ return byDate[d]; } };
+  }
+
+  function weekPicker(id, wk, current, counts){
+    return '<select class="field" id="'+id+'">'+
+      '<option value="all"'+(current==='all'?' selected':'')+'>All weeks</option>'+
+      wk.dates.map(function(d,i){
+        var n=i+1, label=new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+        return '<option value="'+d+'"'+(current===d?' selected':'')+'>Week '+n+' &middot; '+label+
+               ' ('+(counts[d]||0)+')</option>';
+      }).join('')+'</select>';
+  }
+
+  /* ---------------- schedule ---------------- */
+  function teamOptions(sel){
+    return DS.TEAMS.slice().sort(function(a,b){return a.name.localeCompare(b.name);})
+      .map(function(t){return '<option value="'+t.id+'"'+(t.id===sel?' selected':'')+'>'+
+        DSUI.esc(t.name)+' ('+t.league+')</option>';}).join('');
+  }
+
+  function schedulePanel(){
+    panel('<div class="form-card"><h2 class="h-sm" style="margin-bottom:6px">Generate a full season</h2>'+
+      '<p class="muted" style="font-size:.9rem;margin-bottom:16px">Builds a round-robin slate for every '+
+      'team in the live season, You can also manually put in games below for rigging purposes. Any '+
+      'games still marked <em>scheduled</em> will not be affected. Finals and recorded scores left alone.</p>'+
+      '<div class="field-row"><label for="gdate">First game day</label><input type="date" id="gdate"></div>'+
+      '<div class="field-row"><label for="gweeks">Weeks</label><input type="text" id="gweeks" value="8"></div>'+
+      '<div class="field-row"><label for="gtime">First pitch</label><input type="text" id="gtime" value="09:10"></div>'+
+      '<div class="field-row"><label for="gslot">Minutes between games</label><input type="text" id="gslot" value="55"></div>'+
+      '<button class="btn btn-primary" id="ggen">Generate schedule</button>'+
+      '<div id="gmsg" style="margin-top:12px"></div></div>'+
+
+      '<div class="form-card" style="margin-top:22px"><h2 class="h-sm" style="margin-bottom:14px">Add one game</h2>'+
+      '<div class="field-row"><label>Date</label><input type="date" id="ndate"></div>'+
+      '<div class="field-row"><label>Time (24h)</label><input type="text" id="ntime" placeholder="13:45"></div>'+
+      '<div class="field-row"><label>Home team</label><select class="field" id="nhome" style="width:100%">'+teamOptions()+'</select></div>'+
+      '<div class="field-row"><label>Away team</label><select class="field" id="naway" style="width:100%">'+teamOptions()+'</select></div>'+
+      '<button class="btn btn-outline" id="nadd">Add game</button>'+
+      '<div id="nmsg" style="margin-top:12px"></div></div>'+
+
+      '<h2 class="h-sm" style="margin:28px 0 14px">Current Game Schedule</h2><div id="glist">Loading…</div>');
+
+    document.getElementById('ggen').addEventListener('click',function(){
+      var d=document.getElementById('gdate').value;
+      if(!d) return setHTML('gmsg', msg('err','Pick a first game day.'));
+      if(!confirm('Replace all scheduled games for the live season?')) return;
+      this.disabled=true; this.textContent='Generating…';
+      DSAPI.generateSchedule({first_date:d,weeks:parseInt(document.getElementById('gweeks').value,10)||8,
+        first_time:document.getElementById('gtime').value||'09:10',
+        slot_minutes:parseInt(document.getElementById('gslot').value,10)||55})
+        .then(function(n){ setHTML('gmsg', msg('ok',n+' games created.')); loadGames(); })
+        .catch(function(e){ setHTML('gmsg', msg('err',DSUI.esc(e.message))); })
+        .then(function(){ var b=document.getElementById('ggen'); if(b){b.disabled=false;b.textContent='Generate schedule';} });
+    });
+
+    document.getElementById('nadd').addEventListener('click',function(){
+      var d=document.getElementById('ndate').value, t=document.getElementById('ntime').value.trim();
+      if(!d||!t) return setHTML('nmsg', msg('err','Date and time are both needed.'));
+      DSAPI.saveGame({game_date:d,game_time:t,
+        home_team:document.getElementById('nhome').value,
+        away_team:document.getElementById('naway').value})
+        .then(function(){ setHTML('nmsg', msg('ok','Added.')); loadGames(); })
+        .catch(function(e){ setHTML('nmsg', msg('err',DSUI.esc(e.message))); });
+    });
+    loadGames();
+  }
+
+  function gameRow(g){
+    var h=DS.byId[g.home_team], a=DS.byId[g.away_team];
+    return '<div class="admin-item" data-id="'+g.id+'"><div></div>'+
+      '<div class="meta"><b>'+DSUI.esc(a?a.short:g.away_team)+' at '+DSUI.esc(h?h.short:g.home_team)+'</b>'+
+      '<span>'+g.game_date+' · '+g.game_time.slice(0,5)+' · '+(g.league||'')+' League'+
+      (g.status!=='scheduled'?' · '+g.status:'')+
+      (g.home_score!=null?' · '+g.away_score+'-'+g.home_score:'')+'</span></div>'+
+      '<button class="btn btn-outline btn-sm" data-del style="color:var(--loss)">Delete</button></div>';
+  }
+
+  var gWeek='all';
+
+  function loadGames(){
+    var host=document.getElementById('glist'); if(!host) return;
+    DSAPI.listGames().then(function(rows){
+      if(!rows.length){ setHTML('glist','<p class="muted">No games yet.</p>'); return; }
+      var wk=weeksFrom(rows), counts={};
+      rows.forEach(function(r){ counts[r.game_date]=(counts[r.game_date]||0)+1; });
+      if(gWeek!=='all' && !counts[gWeek]) gWeek='all';
+      var shown = gWeek==='all' ? rows : rows.filter(function(r){ return r.game_date===gWeek; });
+
+      host.innerHTML =
+        '<div class="toolbar" style="margin-bottom:12px">'+weekPicker('gweek-sel',wk,gWeek,counts)+
+          '<span class="spacer"></span><span class="muted" style="font-size:.85rem">'+
+          shown.length+' of '+rows.length+' games</span></div>'+
+        (gWeek==='all'
+          ? wk.dates.map(function(dt){
+              var g=rows.filter(function(r){ return r.game_date===dt; });
+              return '<h3 class="h-sm" style="margin:20px 0 10px">Week '+wk.weekOf(dt)+' &middot; '+
+                     DSUI.fmtDate(dt,{weekday:'long',month:'long',day:'numeric'})+'</h3>'+
+                     g.map(gameRow).join('');
+            }).join('')
+          : shown.map(gameRow).join(''));
+
+      var sel=document.getElementById('gweek-sel');
+      if(sel) sel.addEventListener('change',function(){ gWeek=this.value; loadGames(); });
+
+      host.querySelectorAll('[data-del]').forEach(function(b){
+        b.addEventListener('click',function(){
+          var id=b.closest('.admin-item').getAttribute('data-id');
+          if(confirm('Delete this game?')) DSAPI.deleteGame(id).then(loadGames);
+        });
+      });
+    }).catch(function(e){ setHTML('glist', msg('err',DSUI.esc(e.message))); });
+  }
+
+  /* ---------------- results ---------------- */
+  function resultsPanel(){
+    panel('<div class="form-card"><h2 class="h-sm" style="margin-bottom:6px">Log scores</h2>'+
+      '<p class="muted" style="font-size:.9rem;margin-bottom:8px">Scores entered here for any '+
+      'season or a past one. Standings auto recalculate from these.</p>'+
+      '<select class="field" id="rseason" style="width:100%"></select></div>'+
+      '<div id="rlist" style="margin-top:20px">Loading…</div>');
+
+    DSAPI.listSeasons().then(function(ss){
+      var sel=document.getElementById('rseason');
+      sel.innerHTML=ss.map(function(s){
+        return '<option value="'+DSUI.esc(s.id)+'"'+(s.is_current?' selected':'')+'>'+
+               DSUI.esc(s.label)+(s.is_current?' (live)':'')+'</option>';
+      }).join('');
+      sel.addEventListener('change',function(){ loadResults(this.value); });
+      loadResults(sel.value);
+    }).catch(function(e){ setHTML('rlist', msg('err',DSUI.esc(e.message))); });
+  }
+
+  var rWeek='all';
+
+  function resultRow(g){
+    var h=DS.byId[g.home_team], a=DS.byId[g.away_team];
+    var scored = g.home_score!=null && g.away_score!=null;
+    return '<div class="admin-item'+(scored?' assigned':'')+'" data-id="'+g.id+'"><div></div>'+
+      '<div class="meta"><b>'+DSUI.esc(a?a.short:g.away_team)+' at '+DSUI.esc(h?h.short:g.home_team)+'</b>'+
+      '<span>'+g.game_date+' &middot; '+g.game_time.slice(0,5)+(scored?' &middot; final':'')+'</span></div>'+
+      '<div style="display:flex;gap:6px;align-items:center">'+
+        '<input type="number" data-as value="'+(g.away_score!=null?g.away_score:'')+'" placeholder="A" '+
+          'style="width:58px;border:1px solid var(--line);border-radius:4px;padding:7px;font-size:.9rem">'+
+        '<input type="number" data-hs value="'+(g.home_score!=null?g.home_score:'')+'" placeholder="H" '+
+          'style="width:58px;border:1px solid var(--line);border-radius:4px;padding:7px;font-size:.9rem">'+
+        '<button class="btn btn-outline btn-sm" data-save>Save</button>'+
+      '</div></div>';
+  }
+
+  function loadResults(season){
+    var host=document.getElementById('rlist'); if(!host) return;
+    DSAPI.listGames(season).then(function(rows){
+      if(!rows.length){ setHTML('rlist','<p class="muted">No games in that season yet.</p>'); return; }
+      var wk=weeksFrom(rows), counts={}, done={};
+      rows.forEach(function(r){
+        counts[r.game_date]=(counts[r.game_date]||0)+1;
+        if(r.home_score!=null) done[r.game_date]=(done[r.game_date]||0)+1;
+      });
+      if(rWeek!=='all' && !counts[rWeek]) rWeek='all';
+      var shown = rWeek==='all' ? rows : rows.filter(function(r){ return r.game_date===rWeek; });
+      var scored = shown.filter(function(r){ return r.home_score!=null; }).length;
+
+      host.innerHTML =
+        '<div class="toolbar" style="margin-bottom:12px">'+weekPicker('rweek-sel',wk,rWeek,counts)+
+          '<span class="spacer"></span><span class="muted" style="font-size:.85rem">'+
+          scored+' of '+shown.length+' scored</span></div>'+
+        (rWeek==='all'
+          ? wk.dates.map(function(dt){
+              var g=rows.filter(function(r){ return r.game_date===dt; });
+              return '<h3 class="h-sm" style="margin:20px 0 10px">Week '+wk.weekOf(dt)+' &middot; '+
+                     DSUI.fmtDate(dt,{month:'long',day:'numeric'})+
+                     ' <span class="muted" style="font-size:.8rem;text-transform:none">('+
+                     (done[dt]||0)+'/'+g.length+' scored)</span></h3>'+
+                     g.map(resultRow).join('');
+            }).join('')
+          : shown.map(resultRow).join(''));
+
+      var sel=document.getElementById('rweek-sel');
+      if(sel) sel.addEventListener('change',function(){ rWeek=this.value; loadResults(season); });
+
+      host.querySelectorAll('[data-save]').forEach(function(b){
+        b.addEventListener('click',function(){
+          var row=b.closest('.admin-item');
+          var hs=parseInt(row.querySelector('[data-hs]').value,10);
+          var as_=parseInt(row.querySelector('[data-as]').value,10);
+          if(isNaN(hs)||isNaN(as_)) return alert('Enter both scores.');
+          b.textContent='Saving…';
+          DSAPI.setScore(row.getAttribute('data-id'),hs,as_,'final')
+            .then(function(){ b.textContent='Saved'; row.classList.add('assigned'); })
+            .catch(function(e){ b.textContent='Save'; alert(e.message); });
+        });
+      });
+    }).catch(function(e){ setHTML('rlist', msg('err',DSUI.esc(e.message))); });
+  }
+
+  /* ---------------- rosters ---------------- */
+  function rostersPanel(){
+    panel('<div class="form-card"><h2 class="h-sm" style="margin-bottom:14px">Add a player</h2>'+
+      '<div class="field-row"><label>Name</label><input type="text" id="pn"></div>'+
+      '<div class="field-row"><label>Email</label><input type="text" id="pe"></div>'+
+      '<div class="field-row"><label>Team</label><select class="field" id="pt" style="width:100%">'+
+        '<option value="">Not assigned</option>'+teamOptions()+'</select></div>'+
+      '<button class="btn btn-primary" id="padd">Add player</button>'+
+      '<div id="pmsg" style="margin-top:12px"></div></div>'+
+      '<h2 class="h-sm" style="margin:28px 0 14px">Roster</h2>'+
+      '<div class="toolbar" style="margin-bottom:12px"><select class="field" id="ros-filter"></select>'+
+      '<span class="spacer"></span><span class="muted" id="ros-count" style="font-size:.85rem"></span></div>'+
+      '<div id="plist2">Loading…</div>');
+
+    document.getElementById('padd').addEventListener('click',function(){
+      var n=document.getElementById('pn').value.trim();
+      if(n.length<2) return setHTML('pmsg', msg('err','Name is required.'));
+      DSAPI.savePlayer({full_name:n,email:document.getElementById('pe').value.trim(),
+        team_id:document.getElementById('pt').value})
+        .then(function(){ setHTML('pmsg', msg('ok','Added.'));
+          document.getElementById('pn').value='';document.getElementById('pe').value='';loadRoster(); })
+        .catch(function(e){ setHTML('pmsg', msg('err',DSUI.esc(e.message))); });
+    });
+    loadRoster();
+  }
+
+  var rosFilter='all';
+
+  function loadRoster(){
+    var host=document.getElementById('plist2'); if(!host) return;
+    DSAPI.listPlayers().then(function(rows){
+      if(!rows.length){ host.innerHTML='<p class="muted">No players registered yet.</p>'; return; }
+
+      var teams=DS.activeTeams().slice().sort(function(a,b){return a.name.localeCompare(b.name);});
+      var fsel=document.getElementById('ros-filter');
+      if(fsel && !fsel.dataset.built){
+        fsel.innerHTML='<option value="all">All players ('+rows.length+')</option>'+
+          '<option value="none">Not assigned ('+rows.filter(function(r){return !r.team_id;}).length+')</option>'+
+          teams.map(function(t){
+            var n=rows.filter(function(r){return r.team_id===t.id;}).length;
+            return '<option value="'+t.id+'">'+DSUI.esc(t.name)+' ('+n+')</option>';
+          }).join('');
+        fsel.value=rosFilter;
+        fsel.dataset.built='1';
+        fsel.addEventListener('change',function(){ rosFilter=this.value; loadRoster(); });
+      }
+
+      rows = rows.filter(function(r){
+        if(rosFilter==='all') return true;
+        if(rosFilter==='none') return !r.team_id;
+        return r.team_id===rosFilter;
+      });
+      var cnt=document.getElementById('ros-count');
+      if(cnt) cnt.textContent=rows.length+' shown';
+      if(!rows.length){ host.innerHTML='<p class="muted">Nobody matches that filter.</p>'; return; }
+
+      host.innerHTML=rows.map(function(p){
+        return '<div class="admin-item" data-id="'+p.id+'"><div></div>'+
+          '<div class="meta"><b>'+DSUI.esc(p.full_name)+
+            (p.waiver_signed?'':' <span class="pill pill-former">No waiver</span>')+'</b>'+
+            '<span>'+DSUI.esc(p.email||'')+'</span>'+
+            '<select data-team style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:4px;padding:7px 9px;font-size:.85rem">'+
+              '<option value="">Not assigned</option>'+teamOptions(p.team_id)+'</select>'+
+          '</div>'+
+          '<div style="display:flex;flex-direction:column;gap:6px">'+
+            '<button class="btn btn-outline btn-sm" data-save>Save</button>'+
+            '<button class="btn btn-outline btn-sm" data-del style="color:var(--loss)">Remove</button>'+
+          '</div></div>';
+      }).join('');
+      host.querySelectorAll('.admin-item').forEach(function(row){
+        var id=row.getAttribute('data-id');
+        row.querySelector('[data-save]').addEventListener('click',function(){
+          var b=this; b.textContent='Saving…';
+          DSAPI.savePlayer({id:id,full_name:row.querySelector('b').textContent.replace('No waiver','').trim(),
+            email:row.querySelector('span').textContent.trim(),
+            team_id:row.querySelector('[data-team]').value})
+            .then(function(){ b.textContent='Saved'; })
+            .catch(function(e){ b.textContent='Save'; alert(e.message); });
+        });
+        row.querySelector('[data-del]').addEventListener('click',function(){
+          if(confirm('Remove this player from the season?')) DSAPI.deletePlayer(id).then(loadRoster);
+        });
+      });
+    }).catch(function(e){ host.innerHTML=msg('err',DSUI.esc(e.message)); });
+  }
+
+  var s=DSAPI.adminSession();
+  if(s) shell(); else login();
+})();
+</script>
+</body>
+</html>

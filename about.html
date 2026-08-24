@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="https://playdurham.com/wp-content/uploads/2024/04/2024-Wiffle-Ball-Logo.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/site.css?v=w601430">
+<title>About | Durham Wiffle Ball</title>
+<meta name="description" content="Durham Wiffle Ball is a recreational co-ed league raising money for Miracle League of the Triangle.">
+</head>
+<body>
+<div data-header="about.html"></div>
+<div class="page-head">
+  <div class="wrap">
+    <div class="crumb">Run by Play NC</div>
+    <h1 class="h-lg">About the league</h1>
+    <p>Eight teams, Friday nights, one cause. Managed by Play NC, a 501(c)(3) non-profit based in Durham since 2018.</p>
+  </div>
+</div>
+<main class="section">
+  <div class="wrap wrap-narrow">
+    <div class="prose">
+      <p class="lede">
+        The Durham Wiffle Ball League is a recreational, co-ed, reduced-speed wiffle ball league based
+        in Durham, North Carolina. The 2026 season features eight teams, with opening night on
+        Friday, April 10.
+      </p>
+
+      <h2>Where the money goes</h2>
+      <p id="beneficiary">
+        Proceeds benefit <a href="https://www.mltriangle.com/" target="_blank" rel="noopener">Miracle
+        League of the Triangle</a>, which gives children with disabilities the chance to play baseball
+        on a purpose-built, fully accessible field. The league plays its own games on that field, so
+        the money goes straight back into the ground everyone is standing on.
+      </p>
+
+      <h2>What players get</h2>
+      <ul>
+        <li>A league jersey, made by
+          <a href="https://www.rduprintstudio.com/" target="_blank" rel="noopener">RDU Print Studio</a> in Durham.</li>
+        <li>Durham Bulls tickets, in the good seats, for the winners of the end-of-season tournament.</li>
+        <li>A game on one of the best fields you will ever play on.</li>
+        <li>The good feeling of supporting a Durham non-profit.</li>
+      </ul>
+
+      <h2>How the season runs</h2>
+      <p>
+        A nine-game regular season followed by a two-week playoff tournament. Games are Friday nights
+        from April to September, on every Friday the Durham Bulls do not have a home game. There is an
+        All-Star break on July 10, with a youth and adult tournament the following day.
+      </p>
+      <div class="callout">
+        <p>Full detail on format, lineups and rainouts is on the <a href="rules.html">rules page</a>.</p>
+      </div>
+    </div>
+
+    <div style="margin-top:44px">
+      <div class="eyebrow">With support from</div>
+      <h2 class="h-md" style="margin-bottom:18px">Our sponsors</h2>
+      <div class="grid grid-3" id="sponsors"></div>
+    </div>
+  </div>
+</main>
+<div data-footer></div>
+<script src="assets/js/config.js?v=w601430"></script>
+<script src="assets/js/data.js?v=w601430"></script>
+<script src="assets/js/api.js?v=w601430"></script>
+<script src="assets/js/site.js?v=w601430"></script>
+<script>
+document.getElementById('sponsors').innerHTML = DS.SPONSORS.map(function(s){
+  return '<a class="card card-pad card-hover" href="'+s.site+'" target="_blank" rel="noopener">'+
+    '<h3 class="h-sm">'+DSUI.esc(s.name)+'</h3>'+
+    '<p class="muted" style="font-size:.9rem;margin-top:8px">Visit their site &rarr;</p></a>';
+}).join('');
+</script>
+</body>
+</html>

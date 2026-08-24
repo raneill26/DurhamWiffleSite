@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="https://playdurham.com/wp-content/uploads/2024/04/2024-Wiffle-Ball-Logo.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/site.css?v=w601430">
+<title>Standings | Durham Wiffle Ball</title>
+<meta name="description" content="2026 Season standings for the Durham Wiffle Ball A and B Leagues.">
+</head>
+<body>
+<div data-header="standings.html"></div>
+<div class="page-head">
+  <img class="page-head-bg" src="https://playdurham.com/wp-content/uploads/2024/04/Promo_03-1024x487.jpg" alt="">
+  <div class="wrap">
+    <div class="crumb">2026 Season</div>
+    <h1 class="h-lg">Standings</h1>
+  </div>
+</div>
+<main class="section">
+  <div class="wrap">
+    <div class="toolbar">
+      <select class="field" data-season aria-label="Choose a season"></select>
+      <span class="spacer"></span>
+    </div>
+    <div id="standings-out" style="display:grid;gap:34px"></div>
+    <div class="card card-pad" style="margin-top:34px">
+      <h3 class="h-sm" style="margin-bottom:10px">How teams are ranked</h3>
+      <p class="muted" style="font-size:.93rem;margin:0">
+        Ordered by winning percentage, where a tie counts as half a win. Teams on the same
+        percentage share a position. Within that, run differential then runs scored decide the
+        order shown. Tap any column header to re-sort.
+        <br><br>
+        The dashed line marks the tournament cut: the top <strong>4 of 8</strong> reach the
+        end-of-season tournament.
+      </p>
+    </div>
+  </div>
+</main>
+<div data-footer></div>
+<script src="assets/js/config.js?v=w601430"></script>
+<script src="assets/js/data.js?v=w601430"></script>
+<script src="assets/js/api.js?v=w601430"></script>
+<script src="assets/js/site.js?v=w601430"></script>
+<script>
+(function(){
+  var state={sortKey:'pct',sortDir:'desc',season:DS.SEASON_ARCHIVE[0].id};
+  var noticeIcon=document.querySelector('.notice span');
+  if(noticeIcon) noticeIcon.innerHTML = DSUI.ICONS.info;
+
+  var seasonSel=document.querySelector('[data-season]');
+  seasonSel.innerHTML=DS.SEASON_ARCHIVE.map(function(sn){
+    return '<option value="'+sn.id+'">'+DSUI.esc(sn.label)+(sn.live?'':' (archive)')+'</option>';
+  }).join('');
+  seasonSel.addEventListener('change',function(){state.season=this.value;render();});
+
+  function currentSeason(){
+    return DS.SEASON_ARCHIVE.filter(function(sn){return sn.id===state.season;})[0];
+  }
+
+  function render(){
+    var sn=currentSeason();
+    var notice=document.querySelector('.notice');
+
+    if(!sn.live){
+      if(notice) notice.style.display='none';
+      document.getElementById('standings-out').innerHTML=
+        '<div class="card card-pad center">'+
+          '<h3 class="h-sm">'+DSUI.esc(sn.label)+' results are not imported yet</h3>'+
+          '<p class="muted" style="margin:12px auto 20px;max-width:460px;font-size:.95rem">'+
+            'This season still lives on the current league site. Once its final standings are '+
+            'brought across they will show here the same way '+DS.SEASON_ARCHIVE[0].label+' does.</p>'+
+          '<div class="btn-row" style="justify-content:center">'+
+            '<a class="btn btn-primary btn-sm" href="'+sn.standings+'" target="_blank" rel="noopener">'+DSUI.esc(sn.label)+' standings</a>'+
+            '<a class="btn btn-outline btn-sm" href="'+sn.schedule+'" target="_blank" rel="noopener">'+DSUI.esc(sn.label)+' schedule</a>'+
+          '</div></div>';
+      return;
+    }
+    if(notice) notice.style.display='';
+
+    var results = DS.RESULTS;
+    var all = DS.computeStandings(results);
+
+    document.getElementById('standings-out').innerHTML =
+      DSUI.standingsTable(all, { title: DS.SEASON.label + ' standings',
+        sortKey: state.sortKey, sortDir: state.sortDir, cut: DS.PLAYOFF_CUT });
+
+    document.querySelectorAll('th[data-sort]').forEach(function(th){
+      th.addEventListener('click',function(){
+        var key=th.getAttribute('data-sort');
+        state.sortDir=(state.sortKey===key&&state.sortDir==='desc')?'asc':'desc';
+        state.sortKey=key; render();
+      });
+    });
+  }
+
+  render();
+  DS.loadSchedule().then(function(ok){ if(ok && document.getElementById('standings-out')) render(); });
+})();
+</script>
+</body>
+</html>

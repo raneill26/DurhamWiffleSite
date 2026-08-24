@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Durham Wiffle Ball | Play for a purpose</title>
+<meta name="description" content="A recreational co-ed wiffle ball league in Durham, NC. Eight teams, Friday nights, raising money for Miracle League of the Triangle.">
+<link rel="icon" href="https://playdurham.com/wp-content/uploads/2024/04/2024-Wiffle-Ball-Logo.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/site.css?v=w601430">
+</head>
+<body>
+<div data-header="index.html"></div>
+
+<section class="hero">
+  <img class="hero-bg" src="" alt="" id="hero-bg">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <div class="hero-status">
+          <span class="pill pill-clay">2026 Season</span>
+          <span>Friday nights, April to September</span>
+        </div>
+        <h1 class="h-xl">Wiffle ball<br>for the<em>Miracle League.</em></h1>
+        <p class="lede" style="margin-top:20px;max-width:520px;color:#D6DDE3">
+          A recreational, co-ed, reduced-speed wiffle ball league in Durham. Eight teams, nine weeks,
+          played on the Miracle League's own accessible field, raising money for the kids who play there.
+        </p>
+        <div class="btn-row" style="margin-top:28px">
+          <a class="btn btn-primary btn-lg" href="standings.html">See the standings</a>
+          <a class="btn btn-ghost btn-lg" href="rules.html">How it works</a>
+        </div>
+        <div class="hero-stats">
+          <div class="hero-stat"><b>8</b><span>Teams</span></div>
+          <div class="hero-stat"><b>9</b><span>Game nights</span></div>
+          <div class="hero-stat"><b>40</b><span>MPH speed limit</span></div>
+        </div>
+      </div>
+
+      <div class="spotlight">
+        <div class="spotlight-head"><h3>Next up</h3><span class="pill pill-gold" id="next-date"></span></div>
+        <div class="spotlight-body" style="padding:6px" id="next-games"></div>
+        <div style="padding:12px 12px 8px">
+          <a class="btn btn-ghost btn-sm" href="schedule.html" style="width:100%">Full schedule &rarr;</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section-dark">
+  <div class="wrap">
+    <div class="section-head center">
+      <div class="eyebrow">Why the league exists</div>
+      <h2 class="h-md">The wiffle ball is how we fund the field.</h2>
+      <p class="lede">
+        Proceeds go to Miracle League of the Triangle, which gives children with disabilities the
+        chance to play baseball on a purpose-built accessible field. We play our games on that field.
+      </p>
+    </div>
+    <div class="grid grid-3">
+      <div style="background:rgba(255,255,255,.06);border:1px solid var(--navy-line);border-radius:var(--r);padding:24px">
+        <h3 class="h-sm" style="color:var(--gold)">Friday nights</h3>
+        <p style="color:var(--on-dark-soft);margin-top:10px">Four games a night at 6:20, 7:10, 8:00 and 8:50, done before 9:45.</p>
+      </div>
+      <div style="background:rgba(255,255,255,.06);border:1px solid var(--navy-line);border-radius:var(--r);padding:24px">
+        <h3 class="h-sm" style="color:var(--gold)">Pitch to hit</h3>
+        <p style="color:var(--on-dark-soft);margin-top:10px">A 40 mph speed limit with a radar gun, so more balls get put in play.</p>
+      </div>
+      <div style="background:rgba(255,255,255,.06);border:1px solid var(--navy-line);border-radius:var(--r);padding:24px">
+        <h3 class="h-sm" style="color:var(--gold)">Rain helps</h3>
+        <p style="color:var(--on-dark-soft);margin-top:10px">Cancelled games cannot be rescheduled, so that money goes to charity instead.</p>
+      </div>
+    </div>
+    <div class="center" style="margin-top:30px"><a class="btn btn-primary" href="donations.html">Where the money goes</a></div>
+  </div>
+</section>
+
+<section class="section section-white">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Standings</div>
+      <h2 class="h-md">2026 Season</h2>
+      <p class="lede">Top four reach the end-of-season tournament.</p>
+    </div>
+    <div id="standings-preview"></div>
+    <div class="center" style="margin-top:26px"><a class="btn btn-outline" href="standings.html">Full standings</a></div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="section-head center">
+      <div class="eyebrow">2026 Season</div>
+      <h2 class="h-md">Eight teams</h2>
+      <p class="lede">Click any team for their schedule, record and roster.</p>
+    </div>
+    <div class="team-grid-home" id="team-grid"></div>
+  </div>
+</section>
+
+<section class="section section-ink">
+  <div class="wrap wrap-narrow center">
+    <div class="eyebrow">Play next season</div>
+    <h2 class="h-lg">Bring a team, or come solo.</h2>
+    <p class="lede" style="margin-top:15px">
+      Rosters are eight players. Sign up alone and we will put you on a Free Agent team with about
+      seven others. All players 18 and over.
+    </p>
+    <div class="btn-row" style="justify-content:center;margin-top:26px">
+      <a class="btn btn-primary btn-lg" href="register.html">Register to play</a>
+      <a class="btn btn-ghost btn-lg" href="https://paypal.me/plaync" target="_blank" rel="noopener">Donate</a>
+    </div>
+  </div>
+</section>
+
+<div data-footer></div>
+<script src="assets/js/config.js?v=w601430"></script>
+<script src="assets/js/data.js?v=w601430"></script>
+<script src="assets/js/api.js?v=w601430"></script>
+<script src="assets/js/site.js?v=w601430"></script>
+<script>
+(function(){
+  var hero=document.getElementById('hero-bg');
+  hero.src = DS.HERO_PHOTO;
+  hero.onerror = function(){ this.onerror=null; this.src = DS.HERO_FALLBACK; };
+
+  function nextGameDay(){
+    var now=new Date();
+    for(var i=0;i<DS.SCHEDULE.length;i++){
+      var d=DS.SCHEDULE[i];
+      if(new Date(d.date+'T23:59:59') >= now) return d;
+    }
+    return DS.SCHEDULE[DS.SCHEDULE.length-1];
+  }
+
+  function drawNext(){
+    var day=nextGameDay();
+    if(!day){ return; }
+    var label=document.getElementById('next-date');
+    if(label) label.textContent = DSUI.fmtDate(day.date,{month:'short',day:'numeric'});
+    var host=document.getElementById('next-games');
+    if(host) host.innerHTML = day.games.map(function(g){
+      return DSUI.gameCard(g,{compact:true,results:DS.RESULTS});
+    }).join('');
+  }
+
+  function drawStandings(){
+    var host=document.getElementById('standings-preview');
+    if(!host) return;
+    host.innerHTML = DSUI.standingsTable(DS.computeStandings(DS.RESULTS), {
+      title: DS.SEASON.label, cut: DS.PLAYOFF_CUT });
+  }
+
+  document.getElementById('team-grid').innerHTML = DS.TEAMS.slice()
+    .sort(function(a,b){return a.name.localeCompare(b.name);})
+    .map(function(t){
+      return '<a class="team-tile" href="team.html?id='+t.id+'">'+
+        DSUI.crest(t,88)+
+        '<div class="tile-body"><div class="name">'+DSUI.esc(t.name)+'</div></div></a>';
+    }).join('');
+
+  drawNext(); drawStandings();
+  DS.loadSchedule().then(function(ok){ if(ok){ drawNext(); drawStandings(); } });
+})();
+</script>
+</body>
+</html>

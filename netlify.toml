@@ -1,0 +1,24 @@
+# Static site. Nothing to build, publish the repo root as-is.
+[build]
+  publish = "."
+  command = ""
+
+# Assets are NOT content-hashed (site.js, data.js, site.css keep the same name
+# every deploy), so they must never be cached as immutable. Browsers revalidate
+# with an ETag on each load and get a cheap 304 when nothing changed.
+# If these ever get hashed filenames, long immutable caching can come back.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Keep the admin page out of search results.
+[[headers]]
+  for = "/admin.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"

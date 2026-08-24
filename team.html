@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="https://playdurham.com/wp-content/uploads/2024/04/2024-Wiffle-Ball-Logo.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/site.css?v=w601430">
+<title>Team | Durham Wiffle Ball</title>
+</head>
+<body>
+<div data-header="current-teams.html"></div>
+<div id="team-page"></div>
+<div data-footer></div>
+<script src="assets/js/config.js?v=w601430"></script>
+<script src="assets/js/data.js?v=w601430"></script>
+<script src="assets/js/api.js?v=w601430"></script>
+<script src="assets/js/site.js?v=w601430"></script>
+<script>
+(function(){
+  var id = DSUI.qs('id');
+  var team = DS.byId[id];
+  var host = document.getElementById('team-page');
+
+  if(!team){
+    host.innerHTML =
+      '<div class="page-head"><div class="wrap"><div class="crumb">Teams</div>'+
+      '<h1 class="h-lg">Team not found</h1>'+
+      '<p>Pick a team from the partners page.</p></div></div>'+
+      '<main class="section"><div class="wrap center">'+
+      '<a class="btn btn-primary" href="current-teams.html">All teams</a></div></main>';
+    return;
+  }
+
+  document.title = team.name + ' - Durham Wiffle Ball';
+
+  var games = [];
+
+  function drawTeam(){
+  games = DS.teamGames(team.id);
+  st  = DS.computeStandings(DS.RESULTS).filter(function(r){return r.team.id===team.id;})[0];
+  pos = DS.standingsPosition(team.id, DS.RESULTS);
+  var st, pos;
+
+  function ord(n){
+    var s=['th','st','nd','rd'], v=n%100;
+    return n + (s[(v-20)%10] || s[v] || s[0]);
+  }
+
+  var sched = games.map(function(g){
+    var d = new Date(g.day.date+'T12:00:00');
+    return '<div class="tsched-row">'+
+      '<div class="tsched-date">'+d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+
+        '<small>'+d.toLocaleDateString('en-US',{weekday:'short'})+' &middot; Wk '+g.day.week+'</small></div>'+
+      '<div><span class="tag-ha '+(g.isHome?'tag-home':'tag-away')+'">'+
+        (g.isHome?DSUI.ICONS.plate+'Home':'Away')+'</span></div>'+
+      '<div class="tsched-opp">'+
+        '<img src="'+g.opponent.logo+'" alt="" loading="lazy">'+
+        '<div><a class="n" href="team.html?id='+g.opponent.id+'">'+
+        (g.isHome?'vs ':'at ')+DSUI.esc(g.opponent.name)+'</a></div></div>'+
+      '<div class="tsched-time">'+g.game.time+'</div>'+
+    '</div>';
+  }).join('');
+
+  host.innerHTML =
+    '<div class="page-head">'+
+      '<img class="page-head-bg" src="'+DS.HERO_PHOTO+'" alt="">'+
+      '<div class="wrap">'+
+        '<div class="crumb"><a href="current-teams.html">Teams</a></div>'+
+        '<div class="team-hero">'+
+          DSUI.crest(team,104)+
+          '<div>'+
+            '<h1 class="h-lg">'+DSUI.esc(team.name)+'</h1>'+
+            '<div class="team-rec">'+
+              '<div><b>'+st.w+'-'+st.l+(st.t?'-'+st.t:'')+'</b><span>Record</span></div>'+
+              '<div><b>'+st.rs+'</b><span>Runs scored</span></div>'+
+              '<div><b>'+(st.diff>0?'+':'')+st.diff+'</b><span>Run diff</span></div>'+
+              '<div><b>'+ord(pos.pos)+'</b><span>of '+pos.of+' in the league</span></div>'+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+
+    '<main class="section"><div class="wrap">'+
+      '<div style="display:grid;gap:34px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">'+
+
+        '<section>'+
+          '<div class="eyebrow">Full season</div>'+
+          '<h2 class="h-md" style="margin-bottom:18px">'+DS.SEASON.label+' schedule</h2>'+
+          '<div class="tsched">'+sched+'</div>'+
+          '<p class="muted" style="font-size:.85rem;margin-top:14px">'+
+            'All games at '+DS.SEASON.venue+'.</p>'+
+        '</section>'+
+
+        '<section>'+
+          '<div class="eyebrow">Who they play for</div>'+
+          '<h2 class="h-md" style="margin-bottom:16px">'+DSUI.esc(DS.BENEFICIARY.name)+'</h2>'+
+          '<div class="card card-pad">'+
+            '<p style="color:var(--text-soft)">'+DSUI.esc(DS.BENEFICIARY.blurb)+'</p>'+
+            '<div class="btn-row" style="margin-top:20px">'+
+              '<a class="btn btn-primary btn-sm" href="'+DS.BENEFICIARY.site+'" target="_blank" rel="noopener">Visit their website</a>'+
+            '</div>'+
+          '</div>'+
+
+          '<div class="card card-pad" style="margin-top:18px">'+
+            '<h3 class="h-sm">Support this team</h3>'+
+            '<p class="muted" style="font-size:.93rem;margin-top:10px">'+
+              'Every win moves a bigger share of the season donation pool toward '+DSUI.esc(team.short)+'.</p>'+
+            '<div class="btn-row" style="margin-top:16px">'+
+              '<a class="btn btn-outline btn-sm" href="donations.html">How the pool works</a>'+
+              '<a class="btn btn-outline btn-sm" href="standings.html">League standings</a>'+
+            '</div>'+
+          '</div>'+
+        '</section>'+
+
+      '</div>'+
+
+      '<section id="attendance" style="margin-top:48px"></section>'+
+      '<div style="margin-top:44px" class="center">'+
+        '<a class="btn btn-outline" href="current-teams.html">&larr; All teams</a></div>'+
+    '</div></main>';
+  }
+
+  drawTeam();
+  /* ------------------------------------------------------------------
+     Captain attendance: passcode gate, then a per-game roster.
+     ------------------------------------------------------------------ */
+  function mountAttendance(){
+  var att = document.getElementById('attendance');
+  var upcoming = games.filter(function(g){ return new Date(g.day.date+'T23:59:59') >= new Date(); });
+  var gameList = (upcoming.length ? upcoming : games).slice(0, 8);
+
+  function shell(inner){
+    att.innerHTML =
+      '<div class="eyebrow">Team Members Only</div>'+
+      '<h2 class="h-md" style="margin-bottom:16px">Attendance</h2>'+
+      '<div class="form-card">'+inner+'</div>';
+  }
+
+  function loginView(err){
+    shell(
+      (DSAPI.configured() ? '' :
+        '<div class="form-msg warn"><strong>Not connected yet.</strong> Attendance is built but needs '+
+        'Supabase configured before captains can log in. See SETUP.md.</div>')+
+      (err ? '<div class="form-msg err">'+DSUI.esc(err)+'</div>' : '')+
+      '<p class="muted" style="font-size:.95rem;margin-bottom:18px">'+
+        'Enter the passcode for '+DSUI.esc(team.name)+' to log who is playing.</p>'+
+      '<div class="field-row" style="margin-bottom:14px">'+
+        '<label for="pc">Team passcode</label>'+
+        '<input type="password" id="pc" autocomplete="current-password">'+
+      '</div>'+
+      '<button class="btn btn-primary" id="pc-go">Sign in</button>');
+
+    document.getElementById('pc-go').addEventListener('click', function(){
+      var code = document.getElementById('pc').value.trim();
+      if(!code) return loginView('Enter your team passcode.');
+      if(!DSAPI.configured()) return loginView('No database connected yet, so sign-in cannot be tested.');
+      this.disabled = true; this.textContent = 'Checking…';
+      DSAPI.teamLogin(team.id, code)
+        .then(function(){ rosterView(); })
+        .catch(function(err){
+          var m=(err && err.message)||'';
+          loginView(/invalid passcode/i.test(m) ? 'That passcode did not match.'
+                                                : 'Sign-in failed: '+m);
+        });
+    });
+    document.getElementById('pc').addEventListener('keydown', function(e){
+      if(e.key === 'Enter'){ e.preventDefault(); document.getElementById('pc-go').click(); }
+    });
+  }
+
+  function rosterView(){
+    var sel = gameList[0];
+    shell(
+      '<div class="toolbar" style="margin-bottom:18px">'+
+        '<select class="field" id="att-game">'+
+          gameList.map(function(g,i){
+            var d = new Date(g.day.date+'T12:00:00');
+            return '<option value="'+g.game.gameId+'"'+(i===0?' selected':'')+'>'+
+              d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' '+
+              (g.isHome?'vs ':'at ')+DSUI.esc(g.opponent.short)+'</option>';
+          }).join('')+
+        '</select>'+
+        '<span class="spacer"></span>'+
+        '<button class="btn btn-outline btn-sm" id="att-out">Sign out</button>'+
+      '</div>'+
+      '<div id="att-list"><p class="muted">Loading roster…</p></div>');
+
+    document.getElementById('att-out').addEventListener('click', function(){
+      DSAPI.logout(); loginView();
+    });
+    document.getElementById('att-game').addEventListener('change', function(){
+      loadRoster(parseInt(this.value,10));
+    });
+    loadRoster(sel.game.gameId);
+  }
+
+  function loadRoster(gameId){
+    var list = document.getElementById('att-list');
+    DSAPI.roster(gameId).then(function(rows){
+      if(!rows || !rows.length){
+        list.innerHTML = '<p class="muted">No players are assigned to this team yet. '+
+          'Players appear here once they register.</p>';
+        return;
+      }
+      var order = rows.map(function(p){ return p.player_id; });
+
+      function paint(){
+        list.innerHTML = order.map(function(id, i){
+          var p = rows.filter(function(r){ return r.player_id === id; })[0];
+          return '<div class="att-row" data-p="'+p.player_id+'">'+
+            '<div class="att-move">'+
+              '<button type="button" data-up aria-label="Move up"'+(i===0?' disabled':'')+'>&#9650;</button>'+
+              '<button type="button" data-down aria-label="Move down"'+(i===order.length-1?' disabled':'')+'>&#9660;</button>'+
+            '</div>'+
+            '<div><div class="att-name">'+DSUI.esc(p.full_name)+'</div>'+
+              (p.waiver_signed ? '' : '<div class="att-warn">Waiver not signed</div>')+'</div>'+
+            '<div class="att-btns">'+
+              ['in','maybe','out'].map(function(st){
+                return '<button data-s="'+st+'" aria-pressed="'+(p.status===st)+'">'+st+'</button>';
+              }).join('')+
+            '</div></div>';
+        }).join('')+
+        '<div class="att-order-msg" id="ord-msg">Use the arrows to set the order players appear in. Saved automatically.</div>';
+
+        function note(text, bad){
+          var m=document.getElementById('ord-msg');
+          if(m){ m.textContent=text; m.style.color = bad ? 'var(--loss)' : ''; }
+        }
+
+        list.querySelectorAll('.att-btns button').forEach(function(b){
+          b.addEventListener('click', function(){
+            var row = b.closest('.att-row');
+            var pid = row.getAttribute('data-p');
+            var st  = b.getAttribute('data-s');
+            row.querySelectorAll('.att-btns button').forEach(function(o){ o.setAttribute('aria-pressed','false'); });
+            b.setAttribute('aria-pressed','true');
+            rows.forEach(function(r){ if(r.player_id===pid) r.status=st; });
+            DSAPI.markAttendance(gameId, pid, st)
+              .catch(function(err){ note('Could not save: '+err.message, true); });
+          });
+        });
+
+        function move(pid, delta){
+          var i = order.indexOf(pid), j = i + delta;
+          if(i < 0 || j < 0 || j >= order.length) return;
+          order.splice(j, 0, order.splice(i, 1)[0]);
+          paint();
+          DSAPI.setRosterOrder(order)
+            .then(function(){ note('Order saved.'); })
+            .catch(function(err){ note('Could not save the order: '+err.message, true); });
+        }
+        list.querySelectorAll('[data-up]').forEach(function(b){
+          b.addEventListener('click', function(){ move(b.closest('.att-row').getAttribute('data-p'), -1); });
+        });
+        list.querySelectorAll('[data-down]').forEach(function(b){
+          b.addEventListener('click', function(){ move(b.closest('.att-row').getAttribute('data-p'), 1); });
+        });
+      }
+
+      paint();
+    }).catch(function(err){
+      if(err.message === 'NO_SESSION') return loginView();
+      list.innerHTML = '<div class="form-msg err">Could not load the roster: '+DSUI.esc(err.message)+'</div>';
+    });
+  }
+
+  var sess = DSAPI.session();
+  if(sess && sess.team_id === team.id) rosterView(); else loginView();
+  }
+
+  mountAttendance();
+
+  // Fixtures live in the database. Redraw once they arrive.
+  DS.loadSchedule().then(function(ok){
+    if(ok && document.getElementById('team-page')){ drawTeam(); mountAttendance(); }
+  });
+})();
+</script>
+</body>
+</html>
